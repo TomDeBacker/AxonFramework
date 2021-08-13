@@ -47,6 +47,8 @@ import org.axonframework.common.AxonConfigurationException;
 import org.axonframework.common.AxonException;
 import org.axonframework.common.AxonThreadFactory;
 import org.axonframework.common.Registration;
+import org.axonframework.lifecycle.LifecycleAware;
+import org.axonframework.common.StringUtils;
 import org.axonframework.lifecycle.Lifecycle;
 import org.axonframework.lifecycle.Phase;
 import org.axonframework.lifecycle.ShutdownLatch;
@@ -85,6 +87,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.axonframework.axonserver.connector.util.ProcessingInstructionHelper.priority;
+import static org.axonframework.common.BuilderUtils.assertNonEmpty;
 import static org.axonframework.common.BuilderUtils.assertNonNull;
 
 /**
@@ -134,7 +137,11 @@ public class AxonServerQueryBus implements QueryBus, Distributed<QueryBus>, Life
         this.serializer = builder.buildQuerySerializer();
         this.subscriptionSerializer = builder.buildSubscriptionMessageSerializer();
         this.priorityCalculator = builder.priorityCalculator;
-        this.context = configuration.getContext();
+        if (StringUtils.nonEmptyOrNull(builder.defaultContext)) {
+            this.context = builder.defaultContext;
+        } else {
+            this.context = configuration.getContext();
+        }
         this.targetContextResolver = builder.targetContextResolver.orElse(m -> context);
 
         dispatchInterceptors = new DispatchInterceptors<>();
@@ -450,6 +457,7 @@ public class AxonServerQueryBus implements QueryBus, Distributed<QueryBus>, Life
                 q -> configuration.getContext();
         private ExecutorServiceBuilder executorServiceBuilder =
                 ExecutorServiceBuilder.defaultQueryExecutorServiceBuilder();
+        private String defaultContext;
 
         /**
          * Sets the {@link AxonServerConnectionManager} used to create connections between this application and an Axon
@@ -621,6 +629,18 @@ public class AxonServerQueryBus implements QueryBus, Distributed<QueryBus>, Life
          */
         @Deprecated
         public Builder instructionAckSource(InstructionAckSource<QueryProviderOutbound> instructionAckSource) {
+            return this;
+        }
+
+        /**
+         * TODO
+         *
+         * @param defaultContext
+         * @return the current Builder instance, for fluent interfacing
+         */
+        public Builder defaultContext(String defaultContext) {
+            assertNonEmpty(defaultContext, "The context may not be null or empty");
+            this.defaultContext = defaultContext;
             return this;
         }
 
